@@ -313,8 +313,8 @@ class Database implements LogHandlerInterface
     /**
      * 调试日志
      * @param $info
-     * @param $append
-     * @param $apart
+     * @param bool $append
+     * @param bool $apart
      */
     protected function getDebugLog(&$info, bool $append, bool $apart)
     {
