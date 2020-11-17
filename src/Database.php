@@ -94,6 +94,11 @@ class Database implements LogHandlerInterface
         return true;
     }
 
+    /**
+     * 写入日志到数据库
+     * @param $message
+     * @return \Exception|string
+     */
     protected function writeDb($message)
     {
         if (PHP_SAPI == 'cli') {
@@ -182,7 +187,7 @@ class Database implements LogHandlerInterface
      * @param bool $append 是否追加请求信息
      * @return bool
      */
-    protected function write(array $message, string $destination, $apart = false, $append = false)
+    protected function write(array $message, string $destination, $apart = false, $append = false):bool
     {
         // 检测日志文件大小，超过配置大小则备份日志文件重新生成
         $this->checkLogSize($destination);
@@ -195,7 +200,6 @@ class Database implements LogHandlerInterface
             $info[$type] = $msg;
         }
 
-        // 添加调试日志
         $this->getDebugLog($info, $append, $apart);
         $message = $this->parseLog($info);
 
@@ -207,7 +211,7 @@ class Database implements LogHandlerInterface
      * @access public
      * @return string
      */
-    protected function getMasterLogFile()
+    protected function getMasterLogFile():string
     {
         if ($this->config['max_files']) {
             $files = glob($this->config['path'] . '*.log');
@@ -244,7 +248,7 @@ class Database implements LogHandlerInterface
      * @param string $type 日志类型
      * @return string
      */
-    protected function getApartLevelFile(string $path, string $type)
+    protected function getApartLevelFile(string $path, string $type):string
     {
         if ($this->config['single']) {
             $name = is_string($this->config['single']) ? $this->config['single'] : 'single';
@@ -261,7 +265,6 @@ class Database implements LogHandlerInterface
      * 检查日志文件大小并自动生成备份文件
      * @access protected
      * @param string $destination 日志文件
-     * @return void
      */
     protected function checkLogSize(string $destination)
     {
@@ -283,7 +286,7 @@ class Database implements LogHandlerInterface
      * @param array $info 日志信息
      * @return string
      */
-    protected function parseLog(array $info)
+    protected function parseLog(array $info):string
     {
         $requestInfo = [
             'ip'     => $this->app->request->ip(),
@@ -306,6 +309,12 @@ class Database implements LogHandlerInterface
         return implode(PHP_EOL, $info) . PHP_EOL;
     }
 
+    /**
+     * 调试日志
+     * @param $info
+     * @param $append
+     * @param $apart
+     */
     protected function getDebugLog(&$info, $append, $apart)
     {
         if ($this->app->isDebug() && $append) {
