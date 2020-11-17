@@ -56,7 +56,7 @@ class Database implements LogHandlerInterface
      * @param bool $append 是否追加请求信息
      * @return bool
      */
-    public function save(array $log, $append = false): bool
+    public function save(array $log, bool $append = false): bool
     {
         $this->writeDb($log);
         $destination = $this->getMasterLogFile();
@@ -96,10 +96,11 @@ class Database implements LogHandlerInterface
 
     /**
      * 写入日志到数据库
-     * @param $message
+     * @access protected
+     * @param array $message
      * @return \Exception|string
      */
-    protected function writeDb($message)
+    protected function writeDb(array $message)
     {
         if (PHP_SAPI == 'cli') {
             return '';
@@ -187,7 +188,7 @@ class Database implements LogHandlerInterface
      * @param bool $append 是否追加请求信息
      * @return bool
      */
-    protected function write(array $message, string $destination, $apart = false, $append = false):bool
+    protected function write(array $message, string $destination, bool $apart = false, bool $append = false):bool
     {
         // 检测日志文件大小，超过配置大小则备份日志文件重新生成
         $this->checkLogSize($destination);
@@ -208,7 +209,7 @@ class Database implements LogHandlerInterface
 
     /**
      * 获取主日志文件名
-     * @access public
+     * @access protected
      * @return string
      */
     protected function getMasterLogFile():string
@@ -243,7 +244,7 @@ class Database implements LogHandlerInterface
 
     /**
      * 获取独立日志文件名
-     * @access public
+     * @access protected
      * @param string $path 日志目录
      * @param string $type 日志类型
      * @return string
@@ -315,7 +316,7 @@ class Database implements LogHandlerInterface
      * @param $append
      * @param $apart
      */
-    protected function getDebugLog(&$info, $append, $apart)
+    protected function getDebugLog(&$info, bool $append, bool $apart)
     {
         if ($this->app->isDebug() && $append) {
             if ($this->config['json']) {
