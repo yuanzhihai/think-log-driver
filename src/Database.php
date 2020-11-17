@@ -70,20 +70,14 @@ class Database implements LogHandlerInterface
                 if (!is_string($msg)) {
                     $msg = var_export($msg, true);
                 }
-
                 $info[$type][] = $this->config['json'] ? $msg : '[ ' . $type . ' ] ' . $msg;
             }
-
-            if (!$this->config['json'] && (true === $this->config['apart_level'] || in_array(
-                        $type,
-                        $this->config['apart_level']
-                    ))) {
+            if (true === $this->config['apart_level'] || in_array($type,$this->config['apart_level'])) {
                 // 独立记录的日志级别
                 $filename = $this->getApartLevelFile($path, $type);
-
                 $this->write($info[$type], $filename, true, $append);
-
                 unset($info[$type]);
+                continue;
             }
         }
 
