@@ -148,8 +148,13 @@ class Database implements LogHandlerInterface
             'create_date' => date('Y-m-d H:i:s'),
             'runtime'     => $runtime_max,
         ];
-        $info['sql_list']   = json_encode($sql);
-        $info['sql_source'] = json_encode($message['sql']);
+        if ($db_connect === 'mongodb') {
+            $info['sql_list']   = $sql;
+            $info['sql_source'] = $message['sql'];
+        } else {
+            $info['sql_list']   = json_encode($sql);
+            $info['sql_source'] = json_encode($message['sql']);
+        }
         $log_table          = $this->config['db_table'];
         $msg                = 'success';
         if ($log_db_connect === 'default') {
