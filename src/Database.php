@@ -1,4 +1,5 @@
 <?php
+
 declare (strict_types=1);
 
 namespace think\log\driver;
@@ -25,6 +26,7 @@ class Database implements LogHandlerInterface
         'json_options' => JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
         'format'       => '[%s][%s] %s',
     ];
+    protected $app;
 
     // 实例化并传入参数
     public function __construct(App $app, $config = [])
@@ -101,9 +103,9 @@ class Database implements LogHandlerInterface
             return '';
         }
         $log_db_connect = Config::get('log.db_connect', 'default');
-        $app_name   = app('http')->getName();
-        $controller = $this->app->request->controller();
-        $action     = $this->app->request->action();
+        $app_name       = app('http')->getName();
+        $controller     = $this->app->request->controller();
+        $action         = $this->app->request->action();
 
         //忽略操作
         if (in_array($app_name . '/' . $controller . '/' . $action, $this->config['action_filters'])) {
@@ -132,8 +134,8 @@ class Database implements LogHandlerInterface
         if (!$sql) {
             return '';
         }
-        $time               = time();
-        $info               = [
+        $time = time();
+        $info = [
             'ip'          => $this->app->request->ip(),
             'method'      => $this->app->request->method(),
             'host'        => $this->app->request->host(),
@@ -152,8 +154,8 @@ class Database implements LogHandlerInterface
             $info['sql_list']   = json_encode($sql);
             $info['sql_source'] = json_encode($message['sql']);
         }
-        $log_table          = $this->config['db_table'];
-        $msg                = 'success';
+        $log_table = $this->config['db_table'];
+        $msg       = 'success';
         if ($log_db_connect === 'default') {
             try {
                 Db::name($log_table)->insert($info);
@@ -180,7 +182,7 @@ class Database implements LogHandlerInterface
      * @param bool $append 是否追加请求信息
      * @return bool
      */
-    protected function write($message, $destination, $apart = false, $append = false)
+    protected function write(array $message, string $destination, $apart = false, $append = false)
     {
         // 检测日志文件大小，超过配置大小则备份日志文件重新生成
         $this->checkLogSize($destination);
@@ -189,23 +191,13 @@ class Database implements LogHandlerInterface
         $info['timestamp'] = date($this->config['time_format']);
 
         foreach ($message as $type => $msg) {
-            $msg = is_array($msg) ? implode(PHP_EOL, $msg) : $msg;
-            if (PHP_SAPI == 'cli') {
-                $info['msg']  = $msg;
-                $info['type'] = $type;
-            } else {
-                $info[$type] = $msg;
-            }
+            $msg         = is_array($msg) ? implode(PHP_EOL, $msg) : $msg;
+            $info[$type] = $msg;
         }
 
-        if (PHP_SAPI == 'cli') {
-            $message = $this->parseCliLog($info);
-        } else {
-            // 添加调试日志
-            $this->getDebugLog($info, $append, $apart);
-
-            $message = $this->parseLog($info);
-        }
+        // 添加调试日志
+        $this->getDebugLog($info, $append, $apart);
+        $message = $this->parseLog($info);
 
         return error_log($message, 3, $destination);
     }
@@ -228,17 +220,15 @@ class Database implements LogHandlerInterface
             }
         }
 
-        $cli = PHP_SAPI == 'cli' ? '_cli' : '';
-
         if ($this->config['single']) {
             $name = is_string($this->config['single']) ? $this->config['single'] : 'single';
 
-            $destination = $this->config['path'] . $name . $cli . '.log';
+            $destination = $this->config['path'] . $name  . '.log';
         } else {
             if ($this->config['max_files']) {
-                $filename = date('Ymd') . $cli . '.log';
+                $filename = date('Ymd')  . '.log';
             } else {
-                $filename = date('Ym') . DIRECTORY_SEPARATOR . date('d') . $cli . '.log';
+                $filename = date('Ym') . DIRECTORY_SEPARATOR . date('d')  . '.log';
             }
 
             $destination = $this->config['path'] . $filename;
@@ -254,10 +244,8 @@ class Database implements LogHandlerInterface
      * @param string $type 日志类型
      * @return string
      */
-    protected function getApartLevelFile($path, $type)
+    protected function getApartLevelFile(string $path, string $type)
     {
-        $cli = PHP_SAPI == 'cli' ? '_cli' : '';
-
         if ($this->config['single']) {
             $name = is_string($this->config['single']) ? $this->config['single'] : 'single';
         } elseif ($this->config['max_files']) {
@@ -266,7 +254,7 @@ class Database implements LogHandlerInterface
             $name = date('d');
         }
 
-        return $path . DIRECTORY_SEPARATOR . $name . '_' . $type . $cli . '.log';
+        return $path . DIRECTORY_SEPARATOR . $name . '_' . $type  . '.log';
     }
 
     /**
@@ -275,7 +263,7 @@ class Database implements LogHandlerInterface
      * @param string $destination 日志文件
      * @return void
      */
-    protected function checkLogSize($destination)
+    protected function checkLogSize(string $destination)
     {
         if (is_file($destination) && floor($this->config['file_size']) <= filesize($destination)) {
             try {
@@ -288,27 +276,6 @@ class Database implements LogHandlerInterface
         }
     }
 
-    /**
-     * CLI日志解析
-     * @access protected
-     * @param array $info 日志信息
-     * @return string
-     */
-    protected function parseCliLog($info)
-    {
-        if ($this->config['json']) {
-            $message = json_encode($info, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL;
-        } else {
-            $now = $info['timestamp'];
-            unset($info['timestamp']);
-
-            $message = implode(PHP_EOL, $info);
-
-            $message = "[{$now}]" . $message . PHP_EOL;
-        }
-
-        return $message;
-    }
 
     /**
      * 解析日志
@@ -316,7 +283,7 @@ class Database implements LogHandlerInterface
      * @param array $info 日志信息
      * @return string
      */
-    protected function parseLog($info)
+    protected function parseLog(array $info)
     {
         $requestInfo = [
             'ip'     => $this->app->request->ip(),
