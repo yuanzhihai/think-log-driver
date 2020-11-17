@@ -25,9 +25,9 @@ composer require yzh52521/think-log-driver
             'type'           => 'Database',
             // 大于0.05秒的sql将被记录
             'slow_sql_time'  => 0.5,
-            // 记录日志的数据库配置，即在database.php中的key
+            // 记录日志的数据库配置，即在database.php中的driver
             // 如果设置该值为'default'，则使用系统数据库的实例
-            'db_connect'     => 'default',
+            'db_connect'     => 'default', //mongodb 
             // 记录慢日志查询的数据表名
             'db_table'       => 'log_sql',
             // 忽略的操作，在以下数据中的操作不会被记录
