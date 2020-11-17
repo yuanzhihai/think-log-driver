@@ -303,7 +303,7 @@ class Database implements LogHandlerInterface
 
         array_unshift(
             $info,
-            "---------------------------------------------------------------" . PHP_EOL . "\r\n[{$info['timestamp']}] {$requestInfo['ip']} {$requestInfo['method']} {$requestInfo['host']}{$requestInfo['uri']}"
+            "---------------------------------------------------------------" . PHP_EOL . "[{$info['timestamp']}] {$requestInfo['ip']} {$requestInfo['method']} {$requestInfo['host']}{$requestInfo['uri']}"
         );
         unset($info['timestamp']);
 
