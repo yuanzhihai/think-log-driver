@@ -1,0 +1,24 @@
+{
+  "name": "yzh52521/think-log-driver",
+  "description": "require think-log-driver",
+  "require": {
+    "php": ">=7.1.0",
+    "topthink/framework": "6.0.*"
+  },
+  "require-dev": {
+    "php": ">=7.1"
+  },
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "yzh52521",
+      "email": "396751927@qq.com"
+    }
+  ],
+  "minimum-stability": "stable",
+  "autoload": {
+    "psr-4": {
+      "think\\log\\driver\\": "src/"
+    }
+  }
+}
