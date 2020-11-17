@@ -101,9 +101,6 @@ class Database implements LogHandlerInterface
             return '';
         }
         $log_db_connect = Config::get('log.db_connect', 'default');
-        if (!$db_connect = Config::get('database.' . $log_db_connect,)) {
-            return '';
-        }
         $app_name   = app('http')->getName();
         $controller = $this->app->request->controller();
         $action     = $this->app->request->action();
@@ -148,7 +145,7 @@ class Database implements LogHandlerInterface
             'create_date' => date('Y-m-d H:i:s'),
             'runtime'     => $runtime_max,
         ];
-        if ($db_connect === 'mongodb') {
+        if ($log_db_connect === 'mongodb') {
             $info['sql_list']   = $sql;
             $info['sql_source'] = $message['sql'];
         } else {
@@ -160,7 +157,7 @@ class Database implements LogHandlerInterface
         if ($log_db_connect === 'default') {
             try {
                 Db::name($log_table)->insert($info);
-            } catch (Exception $e) {
+            } catch (\Exception $e) {
                 $msg = $e;
             }
         } else {
