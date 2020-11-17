@@ -62,16 +62,18 @@ class Database implements LogHandlerInterface
         $destination = $this->getMasterLogFile();
         $path        = dirname($destination);
         !is_dir($path) && mkdir($path, 0755, true);
-
         $info = [];
 
         foreach ($log as $type => $val) {
+
             foreach ($val as $msg) {
+
                 if (!is_string($msg)) {
                     $msg = var_export($msg, true);
                 }
                 $info[$type][] = $this->config['json'] ? $msg : '[ ' . $type . ' ] ' . $msg;
             }
+
             if (true === $this->config['apart_level'] || in_array($type,$this->config['apart_level'])) {
                 // 独立记录的日志级别
                 $filename = $this->getApartLevelFile($path, $type);
@@ -99,9 +101,11 @@ class Database implements LogHandlerInterface
         if (PHP_SAPI == 'cli') {
             return '';
         }
+
         if (!isset($message['sql'])) {
             return '';
         }
+
         $log_db_connect = Config::get('log.db_connect', 'default');
         $app_name       = app('http')->getName();
         $controller     = $this->app->request->controller();
@@ -120,13 +124,17 @@ class Database implements LogHandlerInterface
             if (strstr($v, 'SHOW FULL COLUMNS') || strstr($v, 'CONNECT:')) {
                 continue;
             }
+
             $runtime = floatval(substr($v, strrpos($v, 'RunTime:') + 8, -3));
+
             if ($runtime >= $this->config['slow_sql_time']) {
+
                 $sql[] = [
                     'db'      => substr($message['sql'][$db_k], 30),
                     'sql'     => $v,
                     'runtime' => $runtime,
                 ];
+
                 $runtime_max < $runtime && $runtime_max = $runtime;
             }
         }
@@ -134,6 +142,7 @@ class Database implements LogHandlerInterface
         if (!$sql) {
             return '';
         }
+
         $time = time();
         $info = [
             'ip'          => $this->app->request->ip(),
@@ -147,6 +156,7 @@ class Database implements LogHandlerInterface
             'create_date' => date('Y-m-d H:i:s'),
             'runtime'     => $runtime_max,
         ];
+
         if ($log_db_connect === 'mongodb') {
             $info['sql_list']   = $sql;
             $info['sql_source'] = $message['sql'];
@@ -154,8 +164,10 @@ class Database implements LogHandlerInterface
             $info['sql_list']   = json_encode($sql);
             $info['sql_source'] = json_encode($message['sql']);
         }
+
         $log_table = $this->config['db_table'];
         $msg       = 'success';
+
         if ($log_db_connect === 'default') {
             try {
                 Db::name($log_table)->insert($info);
@@ -186,7 +198,6 @@ class Database implements LogHandlerInterface
     {
         // 检测日志文件大小，超过配置大小则备份日志文件重新生成
         $this->checkLogSize($destination);
-
         // 日志信息封装
         $info['timestamp'] = date($this->config['time_format']);
 
@@ -210,7 +221,6 @@ class Database implements LogHandlerInterface
     {
         if ($this->config['max_files']) {
             $files = glob($this->config['path'] . '*.log');
-
             try {
                 if (count($files) > $this->config['max_files']) {
                     unlink($files[0]);
@@ -221,7 +231,6 @@ class Database implements LogHandlerInterface
 
         if ($this->config['single']) {
             $name = is_string($this->config['single']) ? $this->config['single'] : 'single';
-
             $destination = $this->config['path'] . $name  . '.log';
         } else {
             if ($this->config['max_files']) {
@@ -229,7 +238,6 @@ class Database implements LogHandlerInterface
             } else {
                 $filename = date('Ym') . DIRECTORY_SEPARATOR . date('d')  . '.log';
             }
-
             $destination = $this->config['path'] . $filename;
         }
 
@@ -317,9 +325,7 @@ class Database implements LogHandlerInterface
                 // 获取基本信息
                 $runtime = round(microtime(true) - $this->app->getBeginTime(), 10);
                 $reqs    = $runtime > 0 ? number_format(1 / $runtime, 2) : '∞';
-
                 $memory_use = number_format((memory_get_usage() - $this->app->getBeginMem()) / 1024, 2);
-
                 $info = [
                         'runtime' => number_format($runtime, 6) . 's',
                         'reqs'    => $reqs . 'req/s',
@@ -330,9 +336,7 @@ class Database implements LogHandlerInterface
                 // 增加额外的调试信息
                 $runtime = round(microtime(true) - $this->app->getBeginTime(), 10);
                 $reqs    = $runtime > 0 ? number_format(1 / $runtime, 2) : '∞';
-
                 $memory_use = number_format((memory_get_usage() - $this->app->getBeginMem()) / 1024, 2);
-
                 $time_str   = '[运行时间：' . number_format($runtime, 6) . 's] [吞吐率：' . $reqs . 'req/s]';
                 $memory_str = ' [内存消耗：' . $memory_use . 'kb]';
                 $file_load  = ' [文件加载：' . count(get_included_files()) . ']';
