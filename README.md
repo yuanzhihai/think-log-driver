@@ -65,14 +65,14 @@ CREATE TABLE `th_log_sql` (
 	`uri` CHAR(200) NOT NULL DEFAULT '',
 	`ip` CHAR(50) NOT NULL DEFAULT '',
 	`method` CHAR(50) NOT NULL DEFAULT '',
-	`module` CHAR(30) NOT NULL DEFAULT '',
+	`app` CHAR(30) NOT NULL DEFAULT '',
 	`controller` CHAR(30) NOT NULL DEFAULT '',
 	`action` CHAR(50) NOT NULL DEFAULT '',
 	`create_time` INT(11) NOT NULL DEFAULT '0',
 	`create_date` DATETIME NULL DEFAULT NULL,
 	`runtime` DECIMAL(10,3) UNSIGNED NOT NULL DEFAULT '0.000',
 	`sql_list` TEXT NULL,
-	`sql_source` TEXT NULL,
+	`param` TEXT NULL,
 	PRIMARY KEY (`id`),
 	INDEX `rumtime` (`runtime`)
 )

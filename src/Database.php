@@ -59,32 +59,41 @@ class Database implements LogHandlerInterface
     public function save(array $log, bool $append = false): bool
     {
         $this->writeDb($log);
+
         $destination = $this->getMasterLogFile();
-        $path        = dirname($destination);
+
+        $path = dirname($destination);
         !is_dir($path) && mkdir($path, 0755, true);
+
         $info = [];
 
+        // 日志信息封装
+        $time = \DateTime::createFromFormat('0.u00 U', microtime())->setTimezone(new \DateTimeZone(date_default_timezone_get()))->format($this->config['time_format']);
+
         foreach ($log as $type => $val) {
-
+            $message = [];
             foreach ($val as $msg) {
-
                 if (!is_string($msg)) {
                     $msg = var_export($msg, true);
                 }
-                $info[$type][] = $this->config['json'] ? $msg : '[ ' . $type . ' ] ' . $msg;
+
+                $message[] = $this->config['json'] ?
+                    json_encode(['time' => $time, 'type' => $type, 'msg' => $msg], $this->config['json_options']) :
+                    sprintf($this->config['format'], $time, $type, $msg);
             }
 
-            if (true === $this->config['apart_level'] || in_array($type,$this->config['apart_level'])) {
+            if (true === $this->config['apart_level'] || in_array($type, $this->config['apart_level'])) {
                 // 独立记录的日志级别
                 $filename = $this->getApartLevelFile($path, $type);
-                $this->write($info[$type], $filename, true, $append);
-                unset($info[$type]);
+                $this->write($message, $filename,true, $append);
                 continue;
             }
+
+            $info[$type] = $message;
         }
 
         if ($info) {
-            return $this->write($info, $destination, false, $append);
+            return $this->write($info, $destination,false,$append);
         }
 
         return true;
@@ -102,7 +111,9 @@ class Database implements LogHandlerInterface
             return '';
         }
 
-        if (!isset($message['sql'])) {
+        if (!isset($message['sql']) && !isset($message['error']) && empty(
+            $this->app->request->get()
+            ) && empty($this->app->request->post())) {
             return '';
         }
 
@@ -118,33 +129,34 @@ class Database implements LogHandlerInterface
 
         $sql         = [];
         $runtime_max = 0;
+        if (isset($message['sql'])) {
+            foreach ($message['sql'] as $k => $v) {
+                $db_k = 0;
+                if (strstr($v, 'SHOW FULL COLUMNS') || strstr($v, 'CONNECT:')) {
+                    continue;
+                }
 
-        foreach ($message['sql'] as $k => $v) {
-            $db_k = 0;
-            if (strstr($v, 'SHOW FULL COLUMNS') || strstr($v, 'CONNECT:')) {
-                continue;
-            }
+                $runtime = (float)substr($v, strrpos($v, 'RunTime:') + 8, -3);
 
-            $runtime = floatval(substr($v, strrpos($v, 'RunTime:') + 8, -3));
+                if ($runtime >= $this->config['slow_sql_time']) {
+                    $sql[] = [
+                        'db'      => substr($message['sql'][$db_k], 30),
+                        'sql'     => $v,
+                        'runtime' => $runtime,
+                    ];
 
-            if ($runtime >= $this->config['slow_sql_time']) {
-
-                $sql[] = [
-                    'db'      => substr($message['sql'][$db_k], 30),
-                    'sql'     => $v,
-                    'runtime' => $runtime,
-                ];
-
-                $runtime_max < $runtime && $runtime_max = $runtime;
+                    $runtime_max < $runtime && $runtime_max = $runtime;
+                }
             }
         }
-
-        if (!$sql) {
-            return '';
-        }
-
-        $time = time();
-        $info = [
+        $time  = time();
+        $param = [
+            'get'   => $this->app->request->get(),
+            'post'  => $this->app->request->post(),
+            'sql'   => isset($message['sql']) ?? [],
+            'error' => isset($message['error']) ?? [],
+        ];
+        $info  = [
             'ip'          => $this->app->request->ip(),
             'method'      => $this->app->request->method(),
             'host'        => $this->app->request->host(),
@@ -156,13 +168,12 @@ class Database implements LogHandlerInterface
             'create_date' => date('Y-m-d H:i:s'),
             'runtime'     => $runtime_max,
         ];
-
         if ($log_db_connect === 'mongodb') {
-            $info['sql_list']   = $sql;
-            $info['sql_source'] = $message['sql'];
+            $info['sql_list'] = $sql;
+            $info['param']    = $param;
         } else {
-            $info['sql_list']   = json_encode($sql);
-            $info['sql_source'] = json_encode($message['sql']);
+            $info['sql_list'] = json_encode($sql);
+            $info['param']    = json_encode($param);
         }
 
         $log_table = $this->config['db_table'];
@@ -194,20 +205,19 @@ class Database implements LogHandlerInterface
      * @param bool $append 是否追加请求信息
      * @return bool
      */
-    protected function write(array $message, string $destination, bool $apart = false, bool $append = false):bool
+    protected function write(array $message, string $destination, bool $apart = false, bool $append = false): bool
     {
         // 检测日志文件大小，超过配置大小则备份日志文件重新生成
         $this->checkLogSize($destination);
-        // 日志信息封装
-        $info['timestamp'] = date($this->config['time_format']);
+
+        $info = [];
 
         foreach ($message as $type => $msg) {
-            $msg         = is_array($msg) ? implode(PHP_EOL, $msg) : $msg;
-            $info[$type] = $msg;
+            $info[$type] = is_array($msg) ? implode(PHP_EOL, $msg) : $msg;
         }
-
         $this->getDebugLog($info, $append, $apart);
-        $message = $this->parseLog($info);
+
+        $message = implode(PHP_EOL, $info) . PHP_EOL;
 
         return error_log($message, 3, $destination);
     }
@@ -217,7 +227,7 @@ class Database implements LogHandlerInterface
      * @access protected
      * @return string
      */
-    protected function getMasterLogFile():string
+    protected function getMasterLogFile(): string
     {
         if ($this->config['max_files']) {
             $files = glob($this->config['path'] . '*.log');
@@ -230,13 +240,13 @@ class Database implements LogHandlerInterface
         }
 
         if ($this->config['single']) {
-            $name = is_string($this->config['single']) ? $this->config['single'] : 'single';
-            $destination = $this->config['path'] . $name  . '.log';
+            $name        = is_string($this->config['single']) ? $this->config['single'] : 'single';
+            $destination = $this->config['path'] . $name . '.log';
         } else {
             if ($this->config['max_files']) {
-                $filename = date('Ymd')  . '.log';
+                $filename = date('Ymd') . '.log';
             } else {
-                $filename = date('Ym') . DIRECTORY_SEPARATOR . date('d')  . '.log';
+                $filename = date('Ym') . DIRECTORY_SEPARATOR . date('d') . '.log';
             }
             $destination = $this->config['path'] . $filename;
         }
@@ -251,7 +261,7 @@ class Database implements LogHandlerInterface
      * @param string $type 日志类型
      * @return string
      */
-    protected function getApartLevelFile(string $path, string $type):string
+    protected function getApartLevelFile(string $path, string $type): string
     {
         if ($this->config['single']) {
             $name = is_string($this->config['single']) ? $this->config['single'] : 'single';
@@ -261,7 +271,7 @@ class Database implements LogHandlerInterface
             $name = date('d');
         }
 
-        return $path . DIRECTORY_SEPARATOR . $name . '_' . $type  . '.log';
+        return $path . DIRECTORY_SEPARATOR . $name . '_' . $type . '.log';
     }
 
     /**
@@ -284,35 +294,6 @@ class Database implements LogHandlerInterface
 
 
     /**
-     * 解析日志
-     * @access protected
-     * @param array $info 日志信息
-     * @return string
-     */
-    protected function parseLog(array $info):string
-    {
-        $requestInfo = [
-            'ip'     => $this->app->request->ip(),
-            'method' => $this->app->request->method(),
-            'host'   => $this->app->request->host(),
-            'uri'    => $this->app->request->url(),
-        ];
-
-        if ($this->config['json']) {
-            $info = $requestInfo + $info;
-            return json_encode($info, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL;
-        }
-
-        array_unshift(
-            $info,
-            "---------------------------------------------------------------" . PHP_EOL . "[{$info['timestamp']}] {$requestInfo['ip']} {$requestInfo['method']} {$requestInfo['host']}{$requestInfo['uri']}"
-        );
-        unset($info['timestamp']);
-
-        return implode(PHP_EOL, $info) . PHP_EOL;
-    }
-
-    /**
      * 调试日志
      * @param $info
      * @param bool $append
@@ -323,10 +304,10 @@ class Database implements LogHandlerInterface
         if ($this->app->isDebug() && $append) {
             if ($this->config['json']) {
                 // 获取基本信息
-                $runtime = round(microtime(true) - $this->app->getBeginTime(), 10);
-                $reqs    = $runtime > 0 ? number_format(1 / $runtime, 2) : '∞';
+                $runtime    = round(microtime(true) - $this->app->getBeginTime(), 10);
+                $reqs       = $runtime > 0 ? number_format(1 / $runtime, 2) : '∞';
                 $memory_use = number_format((memory_get_usage() - $this->app->getBeginMem()) / 1024, 2);
-                $info = [
+                $info       = [
                         'runtime' => number_format($runtime, 6) . 's',
                         'reqs'    => $reqs . 'req/s',
                         'memory'  => $memory_use . 'kb',
@@ -334,8 +315,8 @@ class Database implements LogHandlerInterface
                     ] + $info;
             } elseif (!$apart) {
                 // 增加额外的调试信息
-                $runtime = round(microtime(true) - $this->app->getBeginTime(), 10);
-                $reqs    = $runtime > 0 ? number_format(1 / $runtime, 2) : '∞';
+                $runtime    = round(microtime(true) - $this->app->getBeginTime(), 10);
+                $reqs       = $runtime > 0 ? number_format(1 / $runtime, 2) : '∞';
                 $memory_use = number_format((memory_get_usage() - $this->app->getBeginMem()) / 1024, 2);
                 $time_str   = '[运行时间：' . number_format($runtime, 6) . 's] [吞吐率：' . $reqs . 'req/s]';
                 $memory_str = ' [内存消耗：' . $memory_use . 'kb]';
