@@ -74,7 +74,7 @@ CREATE TABLE `th_log_sql` (
 	`sql_list` TEXT NULL,
 	`param` TEXT NULL,
 	PRIMARY KEY (`id`),
-	INDEX `rumtime` (`runtime`)
+	INDEX `runtime` (`runtime`)
 )
 COLLATE='utf8_general_ci'
 ENGINE=InnoDB
