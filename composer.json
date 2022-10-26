@@ -3,7 +3,7 @@
     "description": "require think-log-driver",
     "require": {
       "php": ">=7.1.0",
-      "topthink/framework": "^6",
+      "topthink/framework": "^6.0",
       "ext-json": "*"
     },
     "license": "MIT",
