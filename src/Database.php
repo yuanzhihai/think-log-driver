@@ -117,7 +117,7 @@ class Database implements LogHandlerInterface
             return '';
         }
 
-        $log_db_connect = Config::get( 'log.db_connect','default' );
+        $log_db_connect = $this->app->cofige->get( 'log.db_connect','default' );
         $app_name       = app( 'http' )->getName();
         $controller     = $this->app->request->controller();
         $action         = $this->app->request->action();
@@ -148,6 +148,10 @@ class Database implements LogHandlerInterface
                     $runtime_max < $runtime && $runtime_max = $runtime;
                 }
             }
+        }
+        // 执行为0不写入
+        if ($runtime_max <= 0) {
+            return '';
         }
         $time  = time();
         $param = [

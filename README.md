@@ -2,7 +2,7 @@
 think-log-driver
 
 ## 依赖
-适用于`thinkphp6.*`
+适用于`thinkphp6.x,thinkphp8.x`
 php: >=7.1
 
 ## 安装 
@@ -61,13 +61,13 @@ composer require yzh52521/think-log-driver
 ```sql
 CREATE TABLE `th_log_sql` (
 	`id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
-	`host` CHAR(200) NOT NULL DEFAULT '',
-	`uri` CHAR(200) NOT NULL DEFAULT '',
-	`ip` CHAR(50) NOT NULL DEFAULT '',
-	`method` CHAR(50) NOT NULL DEFAULT '',
-	`app` CHAR(30) NOT NULL DEFAULT '',
-	`controller` CHAR(30) NOT NULL DEFAULT '',
-	`action` CHAR(50) NOT NULL DEFAULT '',
+	`host` CHAR(200) NOT NULL DEFAULT '' COMMENT '请求的Host',
+	`uri` CHAR(200) NOT NULL DEFAULT COMMENT '请求的URL',
+	`ip` CHAR(50) NOT NULL DEFAULT '' COMMENT 'IP',
+	`method` CHAR(50) NOT NULL DEFAULT '' COMMENT '提交方式',
+	`app` CHAR(30) NOT NULL DEFAULT '' COMMENT '应用',
+	`controller` CHAR(30) NOT NULL DEFAULT '' COMMENT '控制器',
+	`action` CHAR(50) NOT NULL DEFAULT '' COMMENT '方法',
 	`create_time` INT(11) NOT NULL DEFAULT '0',
 	`create_date` DATETIME NULL DEFAULT NULL,
 	`runtime` DECIMAL(10,3) UNSIGNED NOT NULL DEFAULT '0.000',
